@@ -1,4 +1,4 @@
-package com.amilcar.laura.childrentrack.modelosfirebase;
+package com.amilcar.laura.childrentrack.models.firebase;
 
 import com.google.firebase.database.Exclude;
 

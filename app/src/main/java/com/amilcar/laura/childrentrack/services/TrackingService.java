@@ -1,7 +1,6 @@
-package com.amilcar.laura.childrentrack;
+package com.amilcar.laura.childrentrack.services;
 
 import android.Manifest;
-import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.PendingIntent;
 import android.app.Service;
@@ -17,16 +16,24 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
 
-import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
-import com.amilcar.laura.childrentrack.modelosfirebase.Posicion;
+import com.amilcar.laura.childrentrack.R;
+import com.amilcar.laura.childrentrack.interfaces.OnRecordCompletedListener;
+import com.amilcar.laura.childrentrack.models.firebase.Posicion;
+import com.amilcar.laura.childrentrack.utils.firebase.FileSender;
+import com.amilcar.laura.childrentrack.utils.geo.GeoDistance;
+import com.amilcar.laura.childrentrack.utils.geo.GeoPoint;
+import com.amilcar.laura.childrentrack.utils.sound.SoundRecord;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
-public class TrackingService extends Service implements LocationListener {
-
+public class TrackingService extends Service implements LocationListener, OnRecordCompletedListener {
+    public static final int ID_NOTIFICATION = 1;
     private static final String TAG = "TrackingService";
+    SoundRecord soundRecord;
+    GeoPoint lastGeoPoint;
+
 
     public TrackingService() {
     }
@@ -39,6 +46,10 @@ public class TrackingService extends Service implements LocationListener {
     @Override
     public void onCreate() {
         super.onCreate();
+
+        soundRecord = new SoundRecord(this);
+        soundRecord.setOnRecordCompletedListener(this);
+
         buildNotification();
         requestLocationUpdates();
     }
@@ -50,22 +61,18 @@ public class TrackingService extends Service implements LocationListener {
     }
 
     private void buildNotification() {
+        //this notification will stop the service
         String stop = "stop";
         registerReceiver(stopReceiver, new IntentFilter(stop));
         PendingIntent broadcastIntent = PendingIntent.getBroadcast(
                 this, 0, new Intent(stop), PendingIntent.FLAG_UPDATE_CURRENT);
-
-// Create the persistent notification//
         Notification.Builder builder = new Notification.Builder(this)
                 .setContentTitle(getString(R.string.app_name))
-                .setContentText("Parar el servicio track")
-
-//Make this notification ongoing so it can’t be dismissed by the user//
-
+                .setContentText("Parar el servicio de Localizacion")
                 .setOngoing(true)
                 .setContentIntent(broadcastIntent)
                 .setSmallIcon(R.mipmap.ic_launcher);
-        startForeground(1, builder.build());
+        startForeground(ID_NOTIFICATION, builder.build());
     }
 
     protected BroadcastReceiver stopReceiver = new BroadcastReceiver() {
@@ -79,15 +86,12 @@ public class TrackingService extends Service implements LocationListener {
 
     private void requestLocationUpdates() {
         LocationManager locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
-
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
                 || ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-
             locationManager.requestLocationUpdates(locationManager.GPS_PROVIDER,
-                    0,
+                    60 * 1000, //updates every minute
                     0,
                     this);
-
             Log.d(TAG, "location started");
         }
     }
@@ -98,6 +102,19 @@ public class TrackingService extends Service implements LocationListener {
         final String path = "posicionHijo";
         DatabaseReference ref = FirebaseDatabase.getInstance().getReference(path);
         ref.setValue(new Posicion(location.getLatitude(), location.getLongitude()));
+
+
+        GeoPoint currentGeoPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
+        if(lastGeoPoint != null){
+            //find the distance between the las position and the current
+            double km = GeoDistance.geoDistance(lastGeoPoint, currentGeoPoint);
+            if(km < 0.01){// the boy did not move a lot, in a minute
+                //record audio to find out why the child has not moved
+                soundRecord.record();
+            }
+        }
+        //current position is now the last position
+        lastGeoPoint = currentGeoPoint;
     }
 
     @Override
@@ -117,5 +134,11 @@ public class TrackingService extends Service implements LocationListener {
         LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         locationManager.removeUpdates(this);
         super.onDestroy();
+    }
+
+    @Override
+    public void OnRecordCompleted() {
+        //when the sound is recorded, it's send to the server
+        new FileSender(soundRecord.getFileName()).send();
     }
 }

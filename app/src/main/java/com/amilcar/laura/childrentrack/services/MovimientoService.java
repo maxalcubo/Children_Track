@@ -1,4 +1,4 @@
-package com.amilcar.laura.childrentrack;
+package com.amilcar.laura.childrentrack.services;
 
 import android.app.Notification;
 import android.app.PendingIntent;
@@ -18,19 +18,17 @@ import android.os.IBinder;
 import android.os.StrictMode;
 import android.widget.Toast;
 
-public class MovimientoServicio extends Service implements SensorEventListener {
+import com.amilcar.laura.childrentrack.utils.fallDetect.FallDetectAlgorithm;
+import com.amilcar.laura.childrentrack.R;
 
-    public static final boolean SERVERTRACE = false;
-
+public class MovimientoService extends Service implements SensorEventListener {
+    public static final int ID_NOTIFICATION = 2;
+    private static final String TAG = "MovimientoService";
     private SensorManager sensorManager;
-    private Sensor accelerometer;
+    private FallDetectAlgorithm fallDetectAlgorithm;
+    private boolean sendNotificationFall = true;
 
-    private FallDetectAlgo fallDetectAlgo;
-    private boolean flag_fall = false;
-    private boolean flag_buffer_ready = false;
-    private boolean f_send_msg = true;
-
-    public MovimientoServicio() {
+    public MovimientoService() {
     }
 
     protected BroadcastReceiver stopReceiver = new BroadcastReceiver() {
@@ -42,51 +40,41 @@ public class MovimientoServicio extends Service implements SensorEventListener {
     };
 
     private void buildNotification() {
-        String stop = "stop2";
+        //this notification will stop the service
+        String stop = "stop";
         registerReceiver(stopReceiver, new IntentFilter(stop));
         PendingIntent broadcastIntent = PendingIntent.getBroadcast(
-                this, 2, new Intent(stop), PendingIntent.FLAG_UPDATE_CURRENT);
-
-// Create the persistent notification//
+                this, 0, new Intent(stop), PendingIntent.FLAG_UPDATE_CURRENT);
         Notification.Builder builder = new Notification.Builder(this)
-                .setContentTitle(getString(R.string.app_name))
+                .setContentTitle(getString(R.string.app_name) )
                 .setContentText("Parar el servicio Movimiento")
-
-//Make this notification ongoing so it can’t be dismissed by the user//
-
                 .setOngoing(true)
                 .setContentIntent(broadcastIntent)
                 .setSmallIcon(R.mipmap.ic_launcher);
-        startForeground(2, builder.build());
+        startForeground(ID_NOTIFICATION, builder.build());
     }
 
     @Override
     public void onCreate() {
         super.onCreate();
-        if (SERVERTRACE) enableStrictMode(); // for socket handling in mainloop
-
         // start sample and analyze
-        fallDetectAlgo = new FallDetectAlgo();
-        fallDetectAlgo.setDaemon(true);
-        fallDetectAlgo.start();
+        fallDetectAlgorithm = new FallDetectAlgorithm();
+        fallDetectAlgorithm.setDaemon(true);
+        fallDetectAlgorithm.start();
 
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         if (sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) != null) {
-            accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+            Sensor accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
             sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
-
         } else {
-            Toast.makeText(this, "No Accelerometer Found!!",
-                    Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "No Accelerometer Found!!", Toast.LENGTH_LONG).show();
         }
-
 
         buildNotification();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-
         return START_STICKY;
     }
 
@@ -109,35 +97,18 @@ public class MovimientoServicio extends Service implements SensorEventListener {
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-
-        // display if buffer is ready
-        flag_buffer_ready = fallDetectAlgo.get_buffer_ready();
-        if (flag_buffer_ready) {
-            //button.setText("BUFFER OK");
-        } else {
-            //button.setText("NO BUFFER");
-        }
         // store values in buffer and visualize fall
-        flag_fall = fallDetectAlgo.set_data(event); // event has values minus gravity
-        if (flag_fall) {
-            if (f_send_msg) {
-                f_send_msg = false;
-                playTone();
-                //send_sms();
+        boolean hasFallenFlag = fallDetectAlgorithm.set_data(event);
+        if (hasFallenFlag) {
+            if (sendNotificationFall) {
+                sendNotificationFall = false;
+                playTone(); //send notification about posible accident (to the father)
             }
         } else {
-            f_send_msg = true;
+            sendNotificationFall = true;
         }
-
     }
 
-
-
-    public void enableStrictMode() {
-        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
-
-        StrictMode.setThreadPolicy(policy);
-    }
 
     public void playTone() {
         Uri notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);

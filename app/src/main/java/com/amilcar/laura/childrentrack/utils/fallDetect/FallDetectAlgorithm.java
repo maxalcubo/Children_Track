@@ -15,11 +15,13 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
 THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-package com.amilcar.laura.childrentrack;
+package com.amilcar.laura.childrentrack.utils.fallDetect;
 
 import android.hardware.SensorEvent;
 import android.hardware.SensorManager;
 import android.os.Process;
+
+import com.amilcar.laura.childrentrack.activities.MainActivity;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -29,7 +31,7 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 
-public class FallDetectAlgo extends Thread {
+public class FallDetectAlgorithm extends Thread {
 
     private int buffer_index = 0;
     private int algo_index = 0;
@@ -52,7 +54,7 @@ public class FallDetectAlgo extends Thread {
     private DatagramSocket s = null;
     private boolean buffer_ready = false;
 
-    public FallDetectAlgo() {
+    public FallDetectAlgorithm() {
 
         Arrays.fill(buffer_ax, 0);
         Arrays.fill(buffer_ay, 0);
@@ -135,9 +137,9 @@ public class FallDetectAlgo extends Thread {
 
     private void clear_data() {
         for (int i = 0; i < BUFSIZE; i++) {
-            buffer_ax[buffer_index] = 0.0;
-            buffer_ay[buffer_index] = 0.0;
-            buffer_az[buffer_index] = 0.0;
+            buffer_ax[i] = 0.0;
+            buffer_ay[i] = 0.0;
+            buffer_az[i] = 0.0;
         }
     }
 

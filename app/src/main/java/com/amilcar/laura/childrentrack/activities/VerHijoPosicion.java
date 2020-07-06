@@ -1,11 +1,11 @@
-package com.amilcar.laura.childrentrack;
+package com.amilcar.laura.childrentrack.activities;
 
 import androidx.fragment.app.FragmentActivity;
 
 import android.os.Bundle;
 
-import com.amilcar.laura.childrentrack.modelosfirebase.Posicion;
-import com.google.android.gms.maps.CameraUpdate;
+import com.amilcar.laura.childrentrack.R;
+import com.amilcar.laura.childrentrack.models.firebase.Posicion;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -37,7 +37,7 @@ public class VerHijoPosicion extends FragmentActivity implements OnMapReadyCallb
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-        // Add a marker in Sydney and move the camera
+
         LatLng peru = new LatLng(-15.464396, -70.1433611);
         marcadorHijo = mMap.addMarker(new MarkerOptions().position(peru).title("Carlitos"));
         mMap.moveCamera(CameraUpdateFactory.zoomTo(16));
