@@ -1,4 +1,20 @@
 <resources>
     <string name="app_name">Children Track</string>
     <string name="title_activity_ver_hijo_posicion">Posicion del niño</string>
+    <string name="title_activity_inicio">Inicio</string>
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="nav_header_title">Android Studio</string>
+    <string name="nav_header_subtitle">android.studio@android.com</string>
+    <string name="nav_header_desc">Navigation header</string>
+
+    <string name="action_settings">Settings</string>
+    <string name="action_iniciar_servicios">Iniciar servicio</string>
+
+
+    <string name="menu_ver_mapa">Ver mapa</string>
+    <string name="menu_grabar_video">Grabar video</string>
+    <string name="menu_slideshow">Slideshow</string>
+
+    <string name="home_second">Home Second</string>
 </resources>

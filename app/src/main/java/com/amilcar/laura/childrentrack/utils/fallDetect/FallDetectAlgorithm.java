@@ -17,18 +17,8 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 package com.amilcar.laura.childrentrack.utils.fallDetect;
 
-import android.hardware.SensorEvent;
-import android.hardware.SensorManager;
 import android.os.Process;
 
-import com.amilcar.laura.childrentrack.activities.MainActivity;
-
-import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.SocketException;
-import java.net.UnknownHostException;
 import java.util.Arrays;
 
 public class FallDetectAlgorithm extends Thread {
@@ -48,10 +38,6 @@ public class FallDetectAlgorithm extends Thread {
     private double[] buffer_az = new double[BUFSIZE];
     private int count = 0;
     private int ui_reset_flag = 0;
-    private final String MYUDPIP = "192.168.1.67";
-    private final int UPDPORT = 12345;
-    private InetAddress host = null;
-    private DatagramSocket s = null;
     private boolean buffer_ready = false;
 
     public FallDetectAlgorithm() {
@@ -59,18 +45,6 @@ public class FallDetectAlgorithm extends Thread {
         Arrays.fill(buffer_ax, 0);
         Arrays.fill(buffer_ay, 0);
         Arrays.fill(buffer_az, 0);
-
-        if (MainActivity.SERVERTRACE) {
-            try {
-                host = InetAddress.getByName(MYUDPIP);
-                s = new DatagramSocket();
-
-            } catch (UnknownHostException e) {
-                e.printStackTrace();
-            } catch (SocketException e) {
-                e.printStackTrace();
-            }
-        }
     }
 
     public void run() {
@@ -116,15 +90,12 @@ public class FallDetectAlgorithm extends Thread {
         return buffer_ready;
     }
 
-    public boolean set_data(SensorEvent event) {
-
-        //send data to server
-        if (MainActivity.SERVERTRACE) send_udp_data(event);
+    public boolean set_data(float[] linear_acceleration) {
 
         if (flag_enable_algo) {
-            buffer_ax[buffer_index] = event.values[0];
-            buffer_ay[buffer_index] = event.values[1];
-            buffer_az[buffer_index] = event.values[2];
+            buffer_ax[buffer_index] = linear_acceleration[0];
+            buffer_ay[buffer_index] = linear_acceleration[1];
+            buffer_az[buffer_index] = linear_acceleration[2];
 
             buffer_index++;
 
@@ -144,22 +115,6 @@ public class FallDetectAlgorithm extends Thread {
     }
 
 
-    private void send_udp_data(SensorEvent event) {
-        String dataline = Float.toString(event.values[0]) + ":" +
-                Float.toString(event.values[1]) + ":" +
-                Float.toString(event.values[2]);
-
-        int msg_length = dataline.length();
-        byte[] message = dataline.getBytes();
-        DatagramPacket p = new DatagramPacket(message, msg_length, host, UPDPORT);
-        try {
-            s.send(p);
-        } catch (IOException e) {
-            System.err.println(e);
-            e.printStackTrace();
-        }
-    }
-
     // peak detector
     private boolean detect_fall_phase_2(int start, int stop, double threshold) {
         double min = 10000.0;
@@ -170,7 +125,7 @@ public class FallDetectAlgorithm extends Thread {
             y2 = buffer_ay[i];
             z2 = buffer_az[i];
             t = (Math.sqrt(Math.abs(x2) * Math.abs(x2) +
-                    Math.abs(y2) * Math.abs(y2) + Math.abs(z2) * Math.abs(z2))) / SensorManager.GRAVITY_EARTH;
+                    Math.abs(y2) * Math.abs(y2) + Math.abs(z2) * Math.abs(z2)));
             if (t > max) max = t;
             if (t < min) min = t;
         }
@@ -192,7 +147,7 @@ public class FallDetectAlgorithm extends Thread {
             y2 = buffer_ay[i];
             z2 = buffer_az[i];
             t = (Math.sqrt(Math.abs(x2) * Math.abs(x2) +
-                    Math.abs(y2) * Math.abs(y2) + Math.abs(z2) * Math.abs(z2))) / SensorManager.GRAVITY_EARTH;
+                    Math.abs(y2) * Math.abs(y2) + Math.abs(z2) * Math.abs(z2)));
             if (t > max) max = t;
             if (t < min) min = t;
         }

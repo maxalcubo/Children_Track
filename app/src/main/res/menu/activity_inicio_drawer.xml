@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:showIn="navigation_view">
+
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_ver_mapa"
+            android:title="@string/menu_ver_mapa" />
+        <item
+            android:id="@+id/nav_grabar_video"
+            android:title="@string/menu_grabar_video" />
+        <item
+            android:id="@+id/nav_registrar_hijo"
+            android:title="Registrar ID hijo" />
+        <item
+            android:id="@+id/nav_registro_acontecimientos"
+            android:title="Registro de acontecimientos" />
+    </group>
+</menu>

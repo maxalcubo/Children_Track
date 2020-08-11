@@ -1,7 +1,5 @@
 package com.amilcar.laura.childrentrack.services;
 
-import android.app.Notification;
-import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -15,11 +13,14 @@ import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.IBinder;
-import android.os.StrictMode;
 import android.widget.Toast;
 
+import com.amilcar.laura.childrentrack.utils.account.CuentaManager;
+import com.amilcar.laura.childrentrack.models.firebase.Acontecimiento;
+import com.amilcar.laura.childrentrack.utils.notifications.NotificationOfServices;
 import com.amilcar.laura.childrentrack.utils.fallDetect.FallDetectAlgorithm;
-import com.amilcar.laura.childrentrack.R;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 
 public class MovimientoService extends Service implements SensorEventListener {
     public static final int ID_NOTIFICATION = 2;
@@ -28,6 +29,9 @@ public class MovimientoService extends Service implements SensorEventListener {
     private FallDetectAlgorithm fallDetectAlgorithm;
     private boolean sendNotificationFall = true;
 
+    private float[] gravity = new float[3];
+    private float[] linear_acceleration = new float[3];
+
     public MovimientoService() {
     }
 
@@ -35,23 +39,14 @@ public class MovimientoService extends Service implements SensorEventListener {
         @Override
         public void onReceive(Context context, Intent intent) {
             unregisterReceiver(stopReceiver);
+            NotificationOfServices.quitarNotificacion(MovimientoService.this);
             stopSelf();
         }
     };
 
     private void buildNotification() {
-        //this notification will stop the service
-        String stop = "stop";
-        registerReceiver(stopReceiver, new IntentFilter(stop));
-        PendingIntent broadcastIntent = PendingIntent.getBroadcast(
-                this, 0, new Intent(stop), PendingIntent.FLAG_UPDATE_CURRENT);
-        Notification.Builder builder = new Notification.Builder(this)
-                .setContentTitle(getString(R.string.app_name) )
-                .setContentText("Parar el servicio Movimiento")
-                .setOngoing(true)
-                .setContentIntent(broadcastIntent)
-                .setSmallIcon(R.mipmap.ic_launcher);
-        startForeground(ID_NOTIFICATION, builder.build());
+        registerReceiver(stopReceiver, new IntentFilter(NotificationOfServices.STOP));
+        NotificationOfServices.mostrarNotificacion(this);
     }
 
     @Override
@@ -98,17 +93,36 @@ public class MovimientoService extends Service implements SensorEventListener {
     @Override
     public void onSensorChanged(SensorEvent event) {
         // store values in buffer and visualize fall
-        boolean hasFallenFlag = fallDetectAlgorithm.set_data(event);
+        boolean hasFallenFlag = fallDetectAlgorithm.set_data(obtenerAceleracionLinear(event));
         if (hasFallenFlag) {
             if (sendNotificationFall) {
                 sendNotificationFall = false;
                 playTone(); //send notification about posible accident (to the father)
+                mandarDatosAlServidor();
             }
         } else {
             sendNotificationFall = true;
         }
     }
+    private float[] obtenerAceleracionLinear(SensorEvent event){
+        final float alpha = 0.8f;
 
+        gravity[0] = alpha * gravity[0] + (1 - alpha) * event.values[0];
+        gravity[1] = alpha * gravity[1] + (1 - alpha) * event.values[1];
+        gravity[2] = alpha * gravity[2] + (1 - alpha) * event.values[2];
+
+        linear_acceleration[0] = event.values[0] - gravity[0];
+        linear_acceleration[1] = event.values[1] - gravity[1];
+        linear_acceleration[2] = event.values[2] - gravity[2];
+
+        return linear_acceleration;
+    }
+
+    private void mandarDatosAlServidor(){
+        DatabaseReference df = FirebaseDatabase.getInstance().getReference(CuentaManager.getInstance().obtenerIdHijo(this) + "/acontecimientos").push();
+        df.setValue(new Acontecimiento("Posible caida del niño", "Puede ser que su hijo haya sufrido una caida (o un choque)", System.currentTimeMillis(), null));
+
+    }
 
     public void playTone() {
         Uri notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);

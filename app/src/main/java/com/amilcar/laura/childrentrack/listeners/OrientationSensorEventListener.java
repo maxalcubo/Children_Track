@@ -48,7 +48,7 @@ public class OrientationSensorEventListener implements SensorEventListener {
             Log.d(TAG, "z:"+orientationVals[0] + ", x:" + orientationVals[1] + ", y:" + orientationVals[2]);
         }
 
-        //orientationVals[2] = accelValues[2]; // in case of there is not magnetic sensor
+        orientationVals[2] = accelValues[2]; // in case of there is not magnetic sensor
 
         if(orientationVals[2] > 9){
             //screen is top

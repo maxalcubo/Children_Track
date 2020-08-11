@@ -5,12 +5,10 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:context=".activities.MainActivity">
+    tools:context=".activities.RegistroActividad">
 
-    <Button
-        android:id="@+id/btnStart"
+    <ListView
+        android:id="@+id/lista"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Start Services" />
-
+        android:layout_height="match_parent" />
 </LinearLayout>
